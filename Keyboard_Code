@@ -23,6 +23,8 @@ int keys[ROWS][COLS] = {
 byte rowPins[ROWS] = { 19, 18, 15, 14, 16, 10, 20, 21, 5, 4 };
 byte colPins[COLS] = { 3, 2, 0, 1 };
 
+bool shiftActive = false; // Variable, um den Zustand der Shift-Taste zu verfolgen
+
 void setup() {
   Keyboard.begin(); // Initialisiert die Keyboard-Bibliothek
   
@@ -40,6 +42,9 @@ void setup() {
 }
 
 void loop() {
+
+  UeberwacheShift();
+  
   // Durchlaufe jede Spalte und aktiviere sie einzeln
   for (byte col = 0; col < COLS; col++) {
     digitalWrite(colPins[col], LOW); // Aktiviere die aktuelle Spalte
@@ -55,10 +60,18 @@ void loop() {
         if (key != 0) {
           PrintKey(key);
 
-          // Sende die Taste an den PC
-          if (key == KEY_LEFT_SHIFT || key == KEY_LEFT_CTRL || key == KEY_LEFT_ALT) {
+          // Überprüfe, ob die Shift-Taste gedrückt ist
+          if (key == KEY_LEFT_SHIFT) {
+            shiftActive = true; // Shift-Taste aktivieren
+          } 
+          if (key == KEY_LEFT_CTRL || key == KEY_LEFT_ALT) {
             Keyboard.press(key);  // Drücke spezielle Tasten
           } else {
+            // Großbuchstaben oder Sonderzeichen ausgeben, wenn Shift aktiv
+            if (shiftActive) {
+              // Wenn die Shift-Taste gedrückt wird, sende den Großbuchstaben
+              key = toupper((char)key); // Wandle in Großbuchstaben um
+            }
             Keyboard.write((char)key); // Schreibe normale Tasten
           }
         }
@@ -72,8 +85,23 @@ void loop() {
     digitalWrite(colPins[col], HIGH); // Deaktiviere die aktuelle Spalte
   }
 
+  shiftActive = false;
+
   // Entprellen
   delay(50); // Pause zwischen den Abfragen zur Stabilität
+}
+
+void UeberwacheShift() {
+  digitalWrite(0, LOW); // Aktiviere die aktuelle Spalte
+    
+  if (digitalRead(19) == LOW) {
+    shiftActive = true; // Shift-Taste aktivieren
+    Keyboard.releaseAll(); // Lässt alle Tasten los
+
+    Serial.println("Shift aktiv!");
+  }
+
+  digitalWrite(0, HIGH); // Deaktiviere die aktuelle Spalte
 }
 
 void ConsoleOutputDebugging(int row, int col) {
