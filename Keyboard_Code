@@ -1,0 +1,94 @@
+#include <Keyboard.h>
+
+// Anzahl der Zeilen und Spalten im Keypad
+const byte ROWS = 10; // Anzahl der Zeilen
+const byte COLS = 4;  // Anzahl der Spalten
+
+// Tastenlayout (angepasst an die Matrix)
+// Layer 1
+char keys[ROWS][COLS] = {
+  { 'q', 'a', KEY_LEFT_SHIFT, KEY_LEFT_CTRL },
+  { 'w', 's', 'z', KEY_LEFT_ALT },
+  { 'e', 'd', 'x' },
+  { 'r', 'f', 'c' },
+  { 't', 'g', 'v', ' ' },
+  { 'y', 'h', 'b' },
+  { 'u', 'j', 'n' },
+  { 'i', 'k', 'm', KEY_RETURN },
+  { 'o', 'l', KEY_BACKSPACE },
+  { 'p' }
+};
+
+// Pin-Nummern für die Zeilen und Spalten
+// Zeilen-Pins
+byte rowPins[ROWS] = { 19, 18, 15, 14, 16, 10, 20, 21, 5, 4 };
+// Spalten-Pins
+byte colPins[COLS] = { 3, 2, 0, 1 };
+
+void setup() {
+  Keyboard.begin(); // Initialisiert die Keyboard-Bibliothek
+  
+  // Setze die Spalten als Ausgang und die Zeilen als Eingang
+  for (byte i = 0; i < COLS; i++) {
+    pinMode(colPins[i], OUTPUT);
+    digitalWrite(colPins[i], HIGH); // Deaktiviert die Spalten standardmäßig
+  }
+
+  for (byte i = 0; i < ROWS; i++) {
+    pinMode(rowPins[i], INPUT_PULLUP); // Setzt Zeilen-Pins als Eingang mit Pull-up
+  }
+
+  Serial.begin(9600);  // Beginnt die serielle Kommunikation für Debugging
+}
+
+void loop() {
+  // Durchlaufe jede Spalte und aktiviere sie einzeln
+  for (byte col = 0; col < COLS; col++) {
+    digitalWrite(colPins[col], LOW); // Aktiviere die aktuelle Spalte
+
+    // Prüfe jede Zeile
+    for (byte row = 0; row < ROWS; row++) {
+      if (digitalRead(rowPins[row]) == LOW) { // Wenn eine Taste gedrückt ist
+        char key = keys[row][col]; // Hole das Zeichen aus der Matrix
+
+        // Ausgabe der Position in der Matrix und der Pins (für Debugging)
+        Serial.print("Taste gedrückt: ");
+        Serial.print("Reihe ");
+        Serial.print(row);
+        Serial.print(", Spalte ");
+        Serial.print(col);
+        Serial.print(" (Reihen-Pin: ");
+        Serial.print(rowPins[row]);
+        Serial.print(", Spalten-Pin: ");
+        Serial.print(colPins[col]);
+        Serial.println(")");
+
+        // Optionale Ausgabe des Tastensymbols (Debugging)
+        if (key != 0) {
+          Serial.print("Symbol: ");
+          if (key < 32 || key > 126) {
+            Serial.println("Sondertaste");
+          } else {
+            Serial.println(key);
+          }
+
+          // Sende die Taste an den PC
+          if (key == KEY_LEFT_SHIFT || key == KEY_LEFT_CTRL || key == KEY_LEFT_ALT) {
+            Keyboard.press(key);  // Drücke spezielle Tasten
+          } else {
+            Keyboard.write(key); // Schreibe normale Tasten
+          }
+        }
+
+        // Entprellen
+        delay(100); // Kurze Verzögerung für Stabilität
+        Keyboard.releaseAll(); // Lässt alle Tasten los
+      }
+    }
+
+    digitalWrite(colPins[col], HIGH); // Deaktiviere die aktuelle Spalte
+  }
+
+  // Entprellen
+  delay(50); // Pause zwischen den Abfragen zur Stabilität
+}
