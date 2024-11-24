@@ -51,26 +51,11 @@ void loop() {
       if (digitalRead(rowPins[row]) == LOW) { // Wenn eine Taste gedrückt ist
         char key = keys[row][col]; // Hole das Zeichen aus der Matrix
 
-        // Ausgabe der Position in der Matrix und der Pins (für Debugging)
-        Serial.print("Taste gedrückt: ");
-        Serial.print("Reihe ");
-        Serial.print(row);
-        Serial.print(", Spalte ");
-        Serial.print(col);
-        Serial.print(" (Reihen-Pin: ");
-        Serial.print(rowPins[row]);
-        Serial.print(", Spalten-Pin: ");
-        Serial.print(colPins[col]);
-        Serial.println(")");
+        ConsoleOutputDebugging(row, col);
 
         // Optionale Ausgabe des Tastensymbols (Debugging)
         if (key != 0) {
-          Serial.print("Symbol: ");
-          if (key < 32 || key > 126) {
-            Serial.println("Sondertaste");
-          } else {
-            Serial.println(key);
-          }
+          PrintKey(key);
 
           // Sende die Taste an den PC
           if (key == KEY_LEFT_SHIFT || key == KEY_LEFT_CTRL || key == KEY_LEFT_ALT) {
@@ -91,4 +76,27 @@ void loop() {
 
   // Entprellen
   delay(50); // Pause zwischen den Abfragen zur Stabilität
+}
+
+void ConsoleOutputDebugging(int row, int col) {
+  // Ausgabe der Position in der Matrix und der Pins (für Debugging)
+  Serial.print("Taste gedrückt: ");
+  Serial.print("Reihe ");
+  Serial.print(row);
+  Serial.print(", Spalte ");
+  Serial.print(col);
+  Serial.print(" (Reihen-Pin: ");
+  Serial.print(rowPins[row]);
+  Serial.print(", Spalten-Pin: ");
+  Serial.print(colPins[col]);
+  Serial.println(")");
+}
+
+void PrintKey(char key) {
+  Serial.print("Symbol: ");
+  if (key < 32 || key > 126) {
+    Serial.println("Sondertaste");
+  } else {
+    Serial.println(key);
+  }
 }
