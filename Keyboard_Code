@@ -6,24 +6,70 @@ const byte COLS = 4;  // Anzahl der Spalten
 
 // Tastenlayout (angepasst an die Matrix)
 // Layer 1
-int keys[ROWS][COLS] = {
+int layerOne[ROWS][COLS] = {
   { 'q', 'a', KEY_LEFT_SHIFT, KEY_LEFT_CTRL },
-  { 'w', 's', 'z', KEY_LEFT_ALT },
-  { 'e', 'd', 'x' },
-  { 'r', 'f', 'c' },
+  { 'w', 's', 'z', KEY_RIGHT_ALT },
+  { 'e', 'd', 'x', 0 },
+  { 'r', 'f', 'c', 0 },
   { 't', 'g', 'v', ' ' },
-  { 'y', 'h', 'b' },
-  { 'u', 'j', 'n' },
+  { 'y', 'h', 'b', 0 },
+  { 'u', 'j', 'n', 0 },
   { 'i', 'k', 'm', KEY_RETURN },
-  { 'o', 'l', KEY_BACKSPACE },
-  { 'p' }
+  { 'o', 'l', KEY_BACKSPACE, 0 },
+  { 'p', 0, 0, 0 }
+};
+
+// Layer 2
+int layerTwo[ROWS][COLS] = {
+  { '1', 47, KEY_LEFT_SHIFT, KEY_LEFT_CTRL },
+  { '2', 38, KEY_TAB, KEY_RIGHT_ALT },
+  { '3', 62, 0, 0 },
+  { '4', 60, 46, 0 },
+  { '5', 42, 44, ' ' },
+  { '6', 40, 95, 0 },
+  { '7', 0, 33, 0 },
+  { '8', 94, 0, KEY_RETURN },
+  { '9', 64, KEY_BACKSPACE, 0 },
+  { '0', 0, 0, 0 }
+};
+
+// Layer 3
+int layerThree[ROWS][COLS] = {
+  { 0, 63, KEY_LEFT_SHIFT, KEY_LEFT_CTRL },
+  { 0, 0, 0, KEY_RIGHT_ALT },
+  { 0, 0, 0, 0 },
+  { 0, 0, 0, 0 },
+  { 92, 236, 0, ' ' },
+  { 37, 0, 0, 0 },
+  { 189, 36, 0, 0 },
+  { 125, 0, 0, KEY_RETURN },
+  { 93, 124, KEY_BACKSPACE, 0 },
+  { 41, 0, 0, 0 }
+};
+
+// Layer 4
+int layerFour[ROWS][COLS] = {
+  { 0, 39, KEY_LEFT_SHIFT, KEY_LEFT_CTRL },
+  { 0, 45, 0, KEY_RIGHT_ALT },
+  { 0, 0, 0, 0 },
+  { 0, 0, 0, 0 },
+  { 0, 0, 0, ' ' },
+  { 0, 0, 0, 0 },
+  { 91, 0, 0, 0 },
+  { 0, 0, 0, KEY_RETURN },
+  { 59, 0, KEY_BACKSPACE, 0 },
+  { 0, 0, 0, 0 }
 };
 
 // Pin-Nummern für die Zeilen und Spalten
 byte rowPins[ROWS] = { 19, 18, 15, 14, 16, 10, 20, 21, 5, 4 };
 byte colPins[COLS] = { 3, 2, 0, 1 };
 
+int (*activeLayer)[ROWS][COLS] = layerOne[ROWS][COLS];
+
 bool shiftActive = false; // Variable, um den Zustand der Shift-Taste zu verfolgen
+bool strgActive = false;
+bool altActive = false;
 
 void setup() {
   Keyboard.begin(); // Initialisiert die Keyboard-Bibliothek
@@ -44,6 +90,20 @@ void setup() {
 void loop() {
 
   UeberwacheShift();
+
+  UeberwacheStrg();
+
+  UeberwacheAlt();
+
+  if (strgActive == true && altActive == true) {
+    activeLayer = &layerFour;
+  } else if (altActive == true) {
+    activeLayer = &layerThree;
+  } else if (strgActive == true) {
+    activeLayer = &layerTwo;
+  } else {
+    activeLayer = &layerOne;
+  }
   
   // Durchlaufe jede Spalte und aktiviere sie einzeln
   for (byte col = 0; col < COLS; col++) {
@@ -52,7 +112,7 @@ void loop() {
     // Prüfe jede Zeile
     for (byte row = 0; row < ROWS; row++) {
       if (digitalRead(rowPins[row]) == LOW) { // Wenn eine Taste gedrückt ist
-        int key = keys[row][col]; // Hole das Zeichen aus der Matrix
+        int key = (*activeLayer)[row][col]; // Hole das Zeichen aus der Matrix
 
         ConsoleOutputDebugging(row, col);
 
@@ -64,13 +124,24 @@ void loop() {
           if (key == KEY_LEFT_SHIFT) {
             shiftActive = true; // Shift-Taste aktivieren
           } 
-          if (key == KEY_LEFT_CTRL || key == KEY_LEFT_ALT) {
+          if (key == KEY_LEFT_CTRL || key == KEY_RIGHT_ALT) {
             Keyboard.press(key);  // Drücke spezielle Tasten
           } else {
             // Großbuchstaben oder Sonderzeichen ausgeben, wenn Shift aktiv
-            if (shiftActive) {
+            if (shiftActive == true) {
               // Wenn die Shift-Taste gedrückt wird, sende den Großbuchstaben
-              key = toupper((char)key); // Wandle in Großbuchstaben um
+              if (key == 39) {
+                // ä zu Ä
+                key = 34;
+              } else if (key == 59) {
+                // ö zu Ö
+                key = 58;
+              } else if (key == 91) {
+                // ü zu Ü
+                key = 123;
+              } else {
+                key = toupper((char)key); // Wandle in Großbuchstaben um
+              }
             }
             Keyboard.write((char)key); // Schreibe normale Tasten
           }
@@ -86,6 +157,10 @@ void loop() {
   }
 
   shiftActive = false;
+  strgActive = false;
+  altActive = false;
+
+  activeLayer = &layerOne;
 
   // Entprellen
   delay(50); // Pause zwischen den Abfragen zur Stabilität
@@ -102,6 +177,32 @@ void UeberwacheShift() {
   }
 
   digitalWrite(0, HIGH); // Deaktiviere die aktuelle Spalte
+}
+
+void UeberwacheStrg(){
+  digitalWrite(1, LOW); // Aktiviere die aktuelle Spalte
+    
+  if (digitalRead(19) == LOW) {
+    strgActive = true; // Strg-Taste aktivieren
+    Keyboard.releaseAll(); // Lässt alle Tasten los
+
+    Serial.println("Strg aktiv!");
+  }
+
+  digitalWrite(1, HIGH); // Deaktiviere die aktuelle Spalte
+}
+
+void UeberwacheAlt(){
+  digitalWrite(1, LOW); // Aktiviere die aktuelle Spalte
+    
+  if (digitalRead(18) == LOW) {
+    altActive = true; // Alt-Taste aktivieren
+    Keyboard.releaseAll(); // Lässt alle Tasten los
+
+    Serial.println("Alt aktiv!");
+  }
+
+  digitalWrite(1, HIGH); // Deaktiviere die aktuelle Spalte
 }
 
 void ConsoleOutputDebugging(int row, int col) {
